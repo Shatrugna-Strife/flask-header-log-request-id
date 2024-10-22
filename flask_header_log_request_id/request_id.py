@@ -2,13 +2,15 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from flask import Flask as App
-from flask import g
 
-
-_request_id_log_g_attribute = "REQUEST_ID_LOG_G_OBJECT"
 
 def current_request_id() -> str:
-    return g.get(_request_id_log_g_attribute, "")
+    from flask import request, has_request_context
+
+    if has_request_context():
+        return request.environ.get("HTTP_X_REQUEST_ID", "")
+
+    return ""
 
 class RequestID(object):
     """
@@ -41,7 +43,6 @@ class RequestID(object):
     def __call__(self, environ, start_response) -> App:
         request_id_header = self._compute_request_id_header(environ.get(self._flask_header_name))
         environ[self._flask_header_name] = request_id_header
-        environ[_request_id_log_g_attribute] = request_id_header
 
         def new_start_response(status, response_headers, exc_info=None):
             response_headers.append((self._header_name, request_id_header))
